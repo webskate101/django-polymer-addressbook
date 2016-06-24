@@ -1,0 +1,161 @@
+<link rel="import" href="/static/bower_components/paper-card/paper-card.html">
+<link rel="import" href="/static/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+<link rel="import" href="confirm-delete-dialog.html">
+<link rel="import" href="contact-details.html">
+
+<dom-module id="organization-card">
+  <template>
+    <style>
+      #card {
+        min-width: 300px;
+        margin: 20px;
+      }
+      .members .title {
+        font-size: inherit;
+        margin: 5px 0;
+      }
+      .members .content {
+        position: relative;
+        margin: 0;
+        padding: 0;
+        border-bottom: solid 1px #ccc;
+      }
+      .members .content li {
+        list-style: none;
+        padding-left: 5px;
+        height: 40px;
+        line-height: 40px;
+        border-top: solid 1px #ccc;
+      }
+      .members .content li paper-icon-button {
+        position: absolute;
+        right: 0;
+      }
+      .members .controls {
+        text-align: right;
+      }
+      .info-message {
+        font-size: 75%;
+        font-style: italic;
+        color: #888;
+      }
+    </style>
+
+    <ajax-service id="deleteOrganizationAjax"
+        on-response="_onDeleteOrganizationResponse">
+    </ajax-service>
+
+    <ajax-service id="membershipAjax"
+        on-response="_onMembershipDone">
+    </ajax-service>
+
+    <paper-card id="card" heading="[[organization.name]]">
+      <div class="card-content">
+        <contact-details contact="[[organization]]"></contact-details>
+
+        <div class="members">
+          <h3 class="title">Members:</h3>
+
+          <template is="dom-if" if="[[organization.members.length]]">
+            <ul class="content">
+              <template is="dom-repeat" items="[[organization.members]]"
+                  as="member">
+                <li>
+                  <span class="name">
+                    [[member.firstName ]] [[member.lastName]]
+                  </span>
+                  <paper-icon-button icon="remove-circle-outline"
+                      on-tap="_onTapRemoveMember">
+                  </paper-icon-button>
+                </li>
+              </template>
+            </ul>
+          </template>
+
+          <template is="dom-if" if="[[! organization.members.length]]">
+            <span class="info-message">No members added</span>
+          </template>
+
+          <div class="controls">
+            <paper-icon-button icon="add-circle-outline"
+                on-tap="_onTapAddMember">
+            </paper-icon-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <paper-icon-button icon="delete" on-tap="_onTapDelete">
+        </paper-icon-button>
+        <paper-icon-button icon="create" on-tap="_onTapCreate">
+        </paper-icon-button>
+      </div>
+    </paper-card>
+
+    <confirm-delete-dialog id="confirm" name="[[organization.name]]"
+        on-confirmed="_delete">
+    </confirm-delete-dialog>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'organization-card',
+      properties: {
+        organization: String
+      },
+      ready: function() {
+        this._csrfToken = window.document.body.dataset.csrfToken;
+      },
+      _delete: function() {
+        this.$.deleteOrganizationAjax.url = '/addressbook/rest/organization/' +
+            this.organization.id;
+        this.$.deleteOrganizationAjax.method = 'DELETE';
+        this.$.deleteOrganizationAjax.generateRequest();
+      },
+      _hasStreetAddress: function (person) {
+        return (person.streetAddress || person.city || person.postalCode);
+      },
+      _onTapAddMember: function(e) {
+        this.fire('add-member', {organization: this.organization});
+      },
+      _onTapCreate: function() {
+        this.fire('edit-organization', {organization: this.organization});
+      },
+      _onTapDelete: function() {
+        this.$.confirm.open();
+      },
+      _onTapRemoveMember: function(e) {
+        // For an explanation of how the person is put on the event, see:
+        // https://www.polymer-project.org/1.0/docs/devguide/templates#handling-events
+        var person = e.model.member;
+
+        this.$.membershipAjax.url = 'rest/organization/' +
+            this.organization.id + '/member/' + person.id;
+        this.$.membershipAjax.method = 'DELETE';
+        this.$.membershipAjax.generateRequest();
+      },
+      _onDeleteOrganizationResponse: function(e) {
+        var response = e.detail.response;
+        if (response.type != 'organization') {
+          console.error('Expected "organization", received "' +
+              response.type + '"');
+          return;
+        }
+        // TODO(john): Use the organizationId to reload only the data that's
+        // changed instead of the whole list.
+        this.fire('organization-deletion-done');
+      },
+      _onMembershipDone: function() {
+        this.fire('membership-remove-done');
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

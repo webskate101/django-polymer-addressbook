@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="/static/bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="/static/bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="addressbook-app.html">
+  </head>
+
+  <body data-csrf-token="mock_csrf_token">
+
+    <test-fixture id="test-fixture">
+      <template>
+        <addressbook-app id="app"></addressbook-app>
+      </template>
+    </test-fixture>
+
+    <script>
+    (function(window) {
+      'use strict';
+
+       /**
+         * Utility function to wrap the test function inside an async wait for
+         * the Polymer page to render and any auto ajax calls to fire. The test
+         * function should accept the done function as an argument and call it
+         * at the end of the deepest layer of async calls.
+         */
+        function load(test) {
+          return function(done) {
+            async(function() {
+              test(done);
+            });
+          };
+        }
+
+        /**
+         * Utility to wrap a test function in an async wait for the Polymer page
+         * to render. If called from within load(), it will have the done
+         * function available in the scope and should call it at the end of the
+         * test function.
+         */
+        function async(test) {
+          // Wait for the page to load and auto ajax calls to fire
+          flush(function() {
+            // Wait for the page to redraw after getting responses from ajax
+            flush(function() {
+              test();
+            });
+          });
+        }
+
+      function getPerson(i) {
+        return {
+          id: i,
+          firstName: 'p_fn' + i,
+          lastName: 'p_ln' + i,
+          email: 'p_e' + i,
+          phone: 'p_p' + i,
+          streetAddress: 'p_sa' + i,
+          city: 'p_c' + i,
+          postalCode: 'p_pc' + i
+        }
+      }
+
+      function getOrganization(i) {
+        return {
+          id: i,
+          name: 'o_n' + i,
+          email: 'o_e' + i,
+          phone: 'o_p' + i,
+          streetAddress: 'o_sa' + i,
+          city: 'o_c' + i,
+          postalCode: 'o_pc' + i
+        }
+      }
+
+      describe('the addressbook app', function() {
+        var app;
+        var server;
+        var serverData;
+
+        function _handleRequest(request, path) {
+          var headers = {'Content-Type': 'application/javascript'};
+          var body = ')]}\'' + JSON.stringify(serverData[request.method][path]);
+          request.respond(200, headers, body);
+        }
+
+        beforeEach(function() {
+          // Mock the server
+          server = sinon.fakeServer.create({respondImmediately: true})
+          server.respondWith(/.*\/addressbook\/rest\/(.*)/, _handleRequest);
+
+          // Mock the server responses
+          serverData = {
+            'DELETE': {
+              'person/1': {action: 'deleted', type: 'person', id: 1}
+            },
+            'GET': {
+              // Expect 1 organization
+              'organization/all': [getOrganization(1)],
+              // Expect 2 people
+              'person/all': [getPerson(1), getPerson(2)]
+            },
+            'POST': {
+              'person': {action: 'added', type: 'person', id: 3}
+            },
+            'PUT': {
+              'person/1': {action: 'updated', type: 'person', id: 1}
+            }
+          };
+
+          fixture('test-fixture');
+          app = document.getElementById('app');
+        });
+
+        afterEach(function() {
+          server.restore();
+        });
+
+        it('displays the person list by default', load(function(done) {
+          var cards = app.$$('#personList').querySelectorAll('person-card');
+          expect(cards).to.have.length(2);
+          // Expect organization list not to be shown
+          expect(app.$$('#organizationList')).to.equal(null);
+
+          var card = cards[0].$.card;
+          expect(card.heading).to.equal('p_fn1 p_ln1');
+          expect(card.querySelector('#email').textContent).to.equal('p_e1');
+          expect(card.querySelector('#phone').textContent).to.equal('p_p1');
+          expect(card.querySelector('#email').textContent).to.equal('p_e1');
+          expect(
+              card.querySelector('#address').textContent
+                  .replace(/\s+/g, ' ')
+                  .trim()
+          ).to.equal('Street Address: p_sa1 p_c1 p_pc1');
+
+          var card = cards[1].$.card;
+          expect(card.heading).to.equal('p_fn2 p_ln2');
+          expect(card.querySelector('#email').textContent).to.equal('p_e2');
+          expect(card.querySelector('#phone').textContent).to.equal('p_p2');
+          expect(card.querySelector('#email').textContent).to.equal('p_e2');
+          expect(
+              card.querySelector('#address').textContent
+                  .replace(/\s+/g, ' ')
+                  .trim()
+          ).to.equal('Street Address: p_sa2 p_c2 p_pc2');
+
+          done();
+        }));
+
+        it('displays the organization list on selection', load(function(done) {
+          app.$.selectOrganizations.click();
+          async(function() {
+            var cards = app.$$('#organizationList')
+                .querySelectorAll('organization-card');
+            expect(cards).to.have.length(1);
+
+            var card = cards[0].$.card;
+            expect(card.heading).to.equal('o_n1');
+            expect(card.querySelector('#email').textContent).to.equal('o_e1');
+            expect(card.querySelector('#phone').textContent).to.equal('o_p1');
+            expect(card.querySelector('#email').textContent).to.equal('o_e1');
+            expect(
+                card.querySelector('#address').textContent
+                    .replace(/\s+/g, ' ')
+                    .trim()
+            ).to.equal('Street Address: o_sa1 o_c1 o_pc1');
+
+            done();
+          });
+        }));
+
+        it('can add a person', load(function(done) {
+          // Click add
+          app.$$('#personList').$.add.click();
+          async(function() {
+            // Expect inital requests for person and org list to have been made
+            expect(server.requests).to.have.length(2);
+
+            app.$$('person-editor').$.firstName.value = 'p_fn3';
+            app.$$('person-editor').$.lastName.value = 'p_ln3';
+            app.$$('person-editor').$.email.value = 'p_e3';
+            app.$$('person-editor').$.phone.value = 'p_p3';
+            app.$$('person-editor').$.streetAddress.value = 'p_sa3';
+            app.$$('person-editor').$.city.value = 'p_c3';
+            app.$$('person-editor').$.postalCode.value = 'p_pc3';
+            app.$$('person-editor').$$('#done').click();
+
+            async(function() {
+              // Expect POST add
+              expect(server.requests).to.have.length(5);
+              expect(server.requests[2].url).to.match(/.*\/rest\/person$/);
+              expect(server.requests[2].method).to.equal('POST');
+
+              var body = JSON.parse(server.requests[2].requestBody);
+              expect(body.firstName).to.equal('p_fn3');
+              expect(body.lastName).to.equal('p_ln3');
+              expect(body.email).to.equal('p_e3');
+              expect(body.phone).to.equal('p_p3');
+              expect(body.streetAddress).to.equal('p_sa3');
+              expect(body.city).to.equal('p_c3');
+              expect(body.postalCode).to.equal('p_pc3');
+
+              // Expect page refresh
+              expect(server.requests[3].url).to.match(/.*\/rest\/person\/all$/);
+              expect(server.requests[3].method).to.equal('GET');
+              expect(server.requests[4].url).to
+                  .match(/.*\/rest\/organization\/all$/);
+              expect(server.requests[4].method).to.equal('GET');
+              done();
+            });
+          });
+        }));
+
+        it('can delete a person', load(function(done) {
+          app.$$('#personList').$$('person-card').$.delete.click();
+          async(function() {
+            expect(server.requests).to.have.length(2);
+            app.$$('#personList').$$('person-card').$.confirm.$.ok.click();
+            async(function() {
+              // Expect a delete request followed by page refresh
+              expect(server.requests).to.have.length(5);
+              expect(server.requests[2].url).to.match(/.*\/rest\/person\/1$/);
+              expect(server.requests[2].method).to.equal('DELETE');
+              // Page refresh
+              expect(server.requests[3].url).to.match(/.*\/rest\/person\/all$/);
+              expect(server.requests[3].method).to.equal('GET');
+              expect(server.requests[4].url).to
+                  .match(/.*\/rest\/organization\/all$/);
+              expect(server.requests[4].method).to.equal('GET');
+              done();
+            });
+          });
+        }));
+
+        it('can update a person', load(function(done) {
+          // Click edit
+          app.$$('#personList').$$('person-card').$.edit.click();
+          async(function() {
+            expect(server.requests).to.have.length(2);
+
+            expect(app.$$('person-editor').$.firstName.value).to.equal('p_fn1');
+            expect(app.$$('person-editor').$.lastName.value).to.equal('p_ln1');
+            expect(app.$$('person-editor').$.email.value).to.equal('p_e1');
+            expect(app.$$('person-editor').$.phone.value).to.equal('p_p1');
+            expect(app.$$('person-editor').$.streetAddress.value).to
+                .equal('p_sa1');
+            expect(app.$$('person-editor').$.city.value).to.equal('p_c1');
+            expect(app.$$('person-editor').$.postalCode.value).to
+                .equal('p_pc1');
+
+            app.$$('person-editor').$.firstName.value = 'p_fn3';
+            app.$$('person-editor').$.lastName.value = 'p_ln3';
+            app.$$('person-editor').$.email.value = 'p_e3';
+            app.$$('person-editor').$.phone.value = 'p_p3';
+            app.$$('person-editor').$.streetAddress.value = 'p_sa3';
+            app.$$('person-editor').$.city.value = 'p_c3';
+            app.$$('person-editor').$.postalCode.value = 'p_pc3';
+            app.$$('person-editor').$$('#done').click();
+
+            async(function() {
+              // Expect PUT edit
+              expect(server.requests).to.have.length(5);
+              expect(server.requests[2].url).to.match(/.*\/rest\/person\/1$/);
+              expect(server.requests[2].method).to.equal('PUT');
+
+              var body = JSON.parse(server.requests[2].requestBody);
+              expect(body.firstName).to.equal('p_fn3');
+              expect(body.lastName).to.equal('p_ln3');
+              expect(body.email).to.equal('p_e3');
+              expect(body.phone).to.equal('p_p3');
+              expect(body.streetAddress).to.equal('p_sa3');
+              expect(body.city).to.equal('p_c3');
+              expect(body.postalCode).to.equal('p_pc3');
+
+              // Expect page refresh
+              expect(server.requests[3].url).to.match(/.*\/rest\/person\/all$/);
+              expect(server.requests[3].method).to.equal('GET');
+              expect(server.requests[4].url).to
+                  .match(/.*\/rest\/organization\/all$/);
+              expect(server.requests[4].method).to.equal('GET');
+              done();
+            });
+          });
+        }));
+
+        it('can add an organization', load(function(done) {
+          // TODO(john): Implement test
+          expect.fail('Implement test');
+        }));
+
+        it('can delete an organization', load(function(done) {
+          // TODO(john): Implement test
+          expect.fail('Implement test');
+        }));
+
+        it('can update an organization', load(function(done) {
+          // TODO(john): Implement test
+          expect.fail('Implement test');
+        }));
+
+        it('can add a member to an organization', load(function(done) {
+          // TODO(john): Implement test
+          expect.fail('Implement test');
+        }));
+
+        it('can delete a member from an organization', load(function(done) {
+          // TODO(john): Implement test
+          expect.fail('Implement test');
+        }));
+
+      });
+
+    })(window);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,121 @@
+<link rel="import"
+    href="/static/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/bower_components/paper-styles/paper-styles.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+
+<dom-module id="add-member">
+  <template>
+    <style>
+      h2 {
+        @apply(--paper-font-subhead);
+      }
+      span {
+        @apply(--paper-font-common-base);
+      }
+      .content {
+        position: relative;
+        margin: 20px 40px;
+        padding: 0;
+        border-bottom: solid 1px #ccc;
+        max-width: 600px;
+      }
+      .content li {
+        list-style: none;
+        padding-left: 5px;
+        height: 40px;
+        line-height: 40px;
+        border-top: solid 1px #ccc;
+
+      }
+      .content li paper-icon-button {
+        position: absolute;
+        right: 0;
+      }
+      .controls {
+        margin: 20px 40px;
+        text-align: right;
+        max-width: 600px;
+      }
+      .info-message {
+        font-size: 75%;
+        font-style: italic;
+        color: #888;
+      }
+    </style>
+
+    <ajax-service id="membershipAjax"
+        on-response="_onMembershipDone">
+    </ajax-service>
+
+    <h2>Adding a member to [[to.name]]</h2>
+
+    <template is="dom-if" if="[[_notAddedList.length]]">
+      <ul class="content">
+        <template is="dom-repeat"
+            items="[[_notAddedList]]" as="person">
+          <li>
+            <span>[[person.firstName]] [[person.lastName]]</span>
+            <paper-icon-button icon="add-circle-outline" on-tap="_onTapAddMember">
+            </paper-icon-button>
+          </li>
+        </template>
+      </ul>
+    </template>
+
+    <template is="dom-if" if="[[! _notAddedList.length]]">
+      <span class="info-message">No available people to be added</span>
+    </template>
+
+
+    <div class="controls">
+      <paper-icon-button icon="close" on-tap="_onTapClose"></paper-icon-button>
+    </div>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'add-member',
+      properties: {
+        to: Object,
+        personList: Array,
+        _notAddedList: {
+          type: Array,
+          computed: '_computeNotAddedList(personList, to)'
+        }
+      },
+      _computeNotAddedList: function(personList, to) {
+        // Filter out people who are already members of the organization
+        return Array.prototype.filter.call(personList, function(person) {
+          for (var i = 0; i < to.members.length; i++) {
+            if (to.members[i].id == person.id) {
+              return false;
+            }
+          }
+          return true;
+        });
+      },
+      _onMembershipDone: function(e) {
+        this.fire('membership-add-done');
+      },
+      _onTapAddMember: function(e) {
+        // For an explanation of how the person is put on the event, see:
+        // https://www.polymer-project.org/1.0/docs/devguide/templates#handling-events
+        var person = e.model.person;
+        this.$.membershipAjax.url = 'rest/organization/' + this.to.id +
+            '/member/' + person.id;
+        this.$.membershipAjax.method = 'PUT';
+        this.$.membershipAjax.generateRequest();
+      },
+      _onTapClose: function() {
+        this.fire('membership-add-done');
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

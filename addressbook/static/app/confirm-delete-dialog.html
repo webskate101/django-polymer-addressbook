@@ -1,0 +1,52 @@
+<link rel="import" href="/static/bower_components/paper-dialog/paper-dialog.html">
+
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<dom-module id="confirm-delete-dialog">
+  <template>
+    <style>
+      paper-button {
+        margin: 0 10px;
+      }
+    </style>
+
+    <paper-dialog id="confirm" modal
+        on-iron-overlay-closed="_onConfirmDialogClosed">
+      <h2>Confirm delete</h2>
+      <p>
+        Do you really want to delete the entry for
+        <span>"[[name]]"</span>
+      </p>
+      <div class="buttons">
+        <paper-button id="cancel" dialog-dismiss>No</paper-button>
+        <paper-button id="ok" dialog-confirm>Yes</paper-button>
+      </div>
+    </paper-dialog>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'confirm-delete-dialog',
+      properties: {
+        name: String
+      },
+      open: function() {
+        this.$.confirm.open();
+      },
+      _onConfirmDialogClosed: function(e) {
+        if (e.detail.confirmed) {
+          this.fire('confirmed');
+        }
+      }
+    });
+  })(window);
+  </script>
+</dom-module>
+
+
+
+

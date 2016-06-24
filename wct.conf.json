@@ -1,0 +1,14 @@
+{
+  "verbose": false,
+  "persistent": false,
+  "plugins": {
+    "local": {
+      "browsers": ["chrome"]
+    }
+  },
+  "webserver": {
+    "pathMappings": [
+      {"/static/": "addressbook/static/"}
+    ]
+  }
+}

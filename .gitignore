@@ -1,0 +1,6 @@
+addressbook/static/bower_components/
+db.sqlite3
+node_modules/
+venv/
+*.pyc
+

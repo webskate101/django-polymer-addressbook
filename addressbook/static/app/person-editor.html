@@ -1,0 +1,150 @@
+<link rel="import"
+    href="/static/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/static/bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="/static/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+
+<dom-module id="person-editor">
+  <template>
+    <style>
+      .form {
+        margin: 20px;
+        max-width: 600px;
+      }
+      paper-input {
+        margin: 20px 0;
+      }
+      .controls {
+        margin: 20px 40px;
+        text-align: right;
+        max-width: 600px;
+      }
+    </style>
+
+    <ajax-service id="ajax" on-response="_onAjaxResponse"></ajax-service>
+
+    <div class="form">
+      <paper-input id="firstName" label="First name"
+          value="[[person.firstName]]">
+      </paper-input>
+
+      <paper-input id="lastName" label="Last name" value="[[person.lastName]]">
+      </paper-input>
+
+      <paper-input id="email" label="Email" value="[[person.email]]">
+      </paper-input>
+
+      <paper-input id="phone" label="Phone" value="[[person.phone]]">
+      </paper-input>
+
+      <paper-input id="streetAddress" label="Street address"
+          value="[[person.streetAddress]]">
+      </paper-input>
+
+      <paper-input id="city" label="City" value="[[person.city]]">
+      </paper-input>
+
+      <paper-input id="postalCode" label="Postal Code"
+          value="[[person.postalCode]]">
+      </paper-input>
+    </div>
+
+    <div class="controls">
+      <paper-icon-button icon="close" on-tap="_onTapClose">
+      </paper-icon-button>
+      <paper-icon-button id="done" icon="done" on-tap="_onTapDone">
+      </paper-icon-button>
+    </div>
+
+    <paper-toast id="errorToast"></paper-toast>
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'person-editor',
+      properties: {
+        person: String
+      },
+      ready: function() {
+        this._csrfToken = window.document.body.dataset.csrfToken;
+      },
+      _clearForm: function() {
+        this.querySelectorAll('.form paper-input').forEach(function(input) {
+          input.value = '';
+        });
+      },
+      _isFormValid: function() {
+        // TODO(john): Add better validation
+        var thereAreBlankFields = ! (this.$.firstName.value &&
+            this.$.lastName.value);
+
+        if (thereAreBlankFields) {
+          this._showError('First and last name are required fields');
+          this.$.errorToast.open();
+          return false;
+        }
+        return true;
+      },
+      _onTapClose: function() {
+        this.fire('person-editor-done', {update: false});
+        this._clearForm();
+      },
+      _onTapDone: function() {
+        if (! this._isFormValid()) {
+          return;
+        }
+        if (this.person) {
+          this._editPerson();
+        } else {
+          this._createPerson();
+        }
+      },
+      _createPerson: function() {
+        this.$.ajax.url = '/addressbook/rest/person';
+        this.$.ajax.body = this._getPayload();
+        this.$.ajax.method = 'POST';
+        this.$.ajax.generateRequest();
+      },
+      _editPerson: function() {
+        this.$.ajax.url = '/addressbook/rest/person/' + this.person.id;
+        this.$.ajax.body = this._getPayload();
+        this.$.ajax.method = 'PUT';
+        this.$.ajax.generateRequest();
+      },
+      _getPayload: function() {
+        var payload = {
+          firstName: this.$.firstName.value || '',
+          lastName: this.$.lastName.value || '',
+          email: this.$.email.value || '',
+          phone: this.$.phone.value || '',
+          streetAddress: this.$.streetAddress.value || '',
+          city: this.$.city.value || '',
+          postalCode: this.$.postalCode.value || ''
+        };
+        return payload;
+      },
+      _onAjaxResponse: function(e) {
+        var response = e.detail.response;
+        if (response.type != 'person') {
+          console.error('Expected "person", received "' + response.type + '"');
+          return;
+        }
+        // TODO(john): Use the personId to reload only the data that's changed
+        // instead of the whole list.
+        this.fire('person-editor-done', {update: true, personId: response.id});
+        this._clearForm();
+      },
+      _showError: function(message) {
+        this.$.errorToast.text = message;
+        this.$.errorToast.open();
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

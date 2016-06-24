@@ -1,0 +1,51 @@
+<link rel="import" href="/static/bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="/static/bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+<link rel="import" href="organization-card.html">
+
+<dom-module id="organization-list">
+  <template>
+    <style>
+      #add {
+        position: fixed;
+        bottom: 10%;
+        right: 10%;
+      }
+    </style>
+
+    <div>
+      <template is="dom-repeat" items="[[organizationList]]" as="organization">
+        <organization-card organization="[[organization]]"></organization-card>
+      </template>
+    </div>
+
+    <div>
+      <paper-fab id="add" icon="add" on-tap="_onTapAdd"></paper-fab>
+    </div>
+
+    <paper-toast id="toast" opened="[[! organizationList.length]]"
+        duration="-1">
+      There are no organizations stored in the address book. Tap the add button
+      to add some entries.
+    </paper-toast>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'organization-list',
+      properties: {
+        organizationList: Array
+      },
+      _onTapAdd: function() {
+        this.fire('edit-organization');
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

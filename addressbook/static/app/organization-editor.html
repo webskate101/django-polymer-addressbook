@@ -1,0 +1,145 @@
+<link rel="import"
+    href="/static/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/static/bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+
+<dom-module id="organization-editor">
+  <template>
+    <style>
+      .form {
+        margin: 20px;
+        max-width: 600px;
+      }
+      paper-input {
+        margin: 20px 0;
+      }
+      .controls {
+        margin: 20px 40px;
+        text-align: right;
+        max-width: 600px;
+      }
+    </style>
+
+    <ajax-service id="ajax" on-response="_onAjaxResponse"></ajax-service>
+
+    <div class="form">
+      <paper-input id="name" label="Name"
+          value="[[organization.name]]">
+      </paper-input>
+
+      <paper-input id="email" label="Email" value="[[organization.email]]">
+      </paper-input>
+
+      <paper-input id="phone" label="Phone" value="[[organization.phone]]">
+      </paper-input>
+
+      <paper-input id="streetAddress" label="Street address"
+          value="[[organization.streetAddress]]">
+      </paper-input>
+
+      <paper-input id="city" label="City" value="[[organization.city]]">
+      </paper-input>
+
+      <paper-input id="postalCode" label="Postal Code"
+          value="[[organization.postalCode]]">
+      </paper-input>
+    </div>
+
+    <div class="controls">
+      <paper-icon-button icon="close" on-tap="_onTapClose">
+      </paper-icon-button>
+      <paper-icon-button icon="done" on-tap="_onTapDone">
+      </paper-icon-button>
+    </div>
+
+    <paper-toast id="errorToast"></paper-toast>
+  </template>
+
+  <script>
+    (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'organization-editor',
+      properties: {
+        organization: String
+      },
+      ready: function() {
+        this._csrfToken = window.document.body.dataset.csrfToken;
+      },
+      _clearForm: function() {
+        this.querySelectorAll('.form paper-input').forEach(function(input) {
+          input.value = '';
+        });
+      },
+      _isFormValid: function() {
+        // TODO(john): Add better validation
+        if (! this.$.name.value) {
+          this._showError('The organization name is required');
+          return false;
+        }
+        return true;
+      },
+      _onTapClose: function() {
+        this.fire('organization-editor-done', {update: false});
+        this._clearForm();
+      },
+      _onTapDone: function() {
+        if (! this._isFormValid()) {
+          return;
+        }
+        if (this.organization) {
+          this._editOrganization();
+        } else {
+          this._createOrganization();
+        }
+      },
+      _createOrganization: function() {
+        this.$.ajax.url = '/addressbook/rest/organization';
+        this.$.ajax.body = this._getPayload();
+        this.$.ajax.method = 'POST';
+        this.$.ajax.generateRequest();
+      },
+      _editOrganization: function() {
+        this.$.ajax.url = '/addressbook/rest/organization/' +
+            this.organization.id;
+        this.$.ajax.body = this._getPayload();
+        this.$.ajax.method = 'PUT';
+        this.$.ajax.headers = {'X-CSRFToken': this._csrfToken};
+        this.$.ajax.generateRequest();
+      },
+      _getPayload: function() {
+        var payload = {
+          name: this.$.name.value || '',
+          email: this.$.email.value || '',
+          phone: this.$.phone.value || '',
+          streetAddress: this.$.streetAddress.value || '',
+          city: this.$.city.value || '',
+          postalCode: this.$.postalCode.value || ''
+        };
+        return payload;
+      },
+      _onAjaxResponse: function(e) {
+        var response = e.detail.response;
+        if (response.type != 'organization') {
+          console.error('Expected "organization", received "' +
+              response.type + '"');
+          return;
+        }
+        // TODO(john): Use the organizationId to reload only the data that's
+        // changed instead of the whole list.
+        this.fire('organization-editor-done',
+            {update: true, organizationId: response.id});
+        this._clearForm();
+      },
+      _showError: function(message) {
+        this.$.errorToast.text = message;
+        this.$.errorToast.open();
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

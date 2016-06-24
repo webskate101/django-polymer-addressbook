@@ -1,0 +1,16 @@
+{
+  "name": "django-polymer-addressbook",
+  "version": "0.0.1",
+  "description": "A simple address book app which demonstrates use of Django and Polymer",
+  "license": "Apache-2.0",
+  "scripts": {
+    "postinstall": "bower install",
+    "test": "wct addressbook/static/app/test.html"
+  },
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "bower": "1.7.9",
+    "web-component-tester": "4.0.3"
+  }
+}

@@ -1,0 +1,81 @@
+<link rel="import" href="/static/bower_components/paper-card/paper-card.html">
+<link rel="import" href="/static/bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/static/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<link rel="import" href="ajax-service.html">
+<link rel="import" href="confirm-delete-dialog.html">
+<link rel="import" href="contact-details.html">
+
+<dom-module id="person-card">
+  <template>
+    <style>
+      #card {
+        min-width: 300px;
+        margin: 20px;
+      }
+    </style>
+
+    <ajax-service id="ajax" on-response="_onAjaxResponse"></ajax-service>
+
+    <paper-card id="card" heading="[[_fullName(person)]]">
+      <div class="card-content">
+        <contact-details contact="[[person]]"></contact-details>
+      </div>
+      <div class="card-actions">
+        <paper-icon-button id="delete" icon="delete" on-tap="_onTapDelete">
+        </paper-icon-button>
+        <paper-icon-button id="edit" icon="create" on-tap="_onTapCreate">
+        </paper-icon-button>
+      </div>
+    </paper-card>
+
+    <confirm-delete-dialog id="confirm" name="[[_fullName(person)]]"
+        on-confirmed="_delete">
+    </confirm-delete-dialog>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'person-card',
+      properties: {
+        person: String
+      },
+      ready: function() {
+        this._csrfToken = window.document.body.dataset.csrfToken;
+      },
+      _delete: function() {
+        this.$.ajax.url = '/addressbook/rest/person/' + this.person.id;
+        this.$.ajax.method = 'DELETE';
+        this.$.ajax.generateRequest();
+      },
+      _fullName: function(person) {
+        return person.firstName + ' ' + person.lastName;
+      },
+      _hasStreetAddress: function (person) {
+        return (person.streetAddress || person.city || person.postalCode);
+      },
+      _onTapCreate: function() {
+        this.fire('edit-person', {person: this.person});
+      },
+      _onTapDelete: function() {
+        this.$.confirm.open();
+      },
+      _onAjaxResponse: function(e) {
+        var response = e.detail.response;
+        if (response.type != 'person') {
+          console.error('Expected "person", received "' + response.type + '"');
+          return;
+        }
+        // TODO(john): Use the personId to reload only the data that's changed
+        // instead of the whole list.
+        this.fire('person-deletion-done');
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

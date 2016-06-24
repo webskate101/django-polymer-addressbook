@@ -1,0 +1,45 @@
+<link rel="import" href="/static/bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<dom-module id="ajax-service">
+  <template>
+
+    <iron-ajax
+        id="ajax"
+        auto="[[auto]]"
+        headers="[[_headers()]]"
+        content-type="application/json"
+        json-prefix=")]}'"
+        body="[[body]]"
+        method="[[method]]"
+        url="[[url]]"
+        on-response="_onResponse">
+    </iron-ajax>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'ajax-service',
+      properties: {
+        auto: Boolean,
+        body: String,
+        method: String,
+        url: String
+      },
+      generateRequest: function() {
+        this.$.ajax.generateRequest();
+      },
+      _headers: function() {
+        return {'X-CSRFToken': window.document.body.dataset.csrfToken};
+      },
+      _onResponse: function(e) {
+        this.fire('response', e.detail);
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

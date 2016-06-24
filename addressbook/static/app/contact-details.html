@@ -1,0 +1,66 @@
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<dom-module id="contact-details">
+  <template>
+    <style>
+      .address-item {
+        margin: 5px 0;
+      }
+      .address-item dt {
+        float: left;
+        width: 60px;
+        font-weight: bold;
+      }
+      .address-item dd {
+        margin-left: 40px;
+      }
+      .street-address h3 {
+        font-size: inherit;
+        margin: 0;
+      }
+      .street-address-line {
+        margin-left: 15px;
+      }
+    </style>
+
+        <template is="dom-if" if="[[contact.email]]">
+          <dl class="address-item">
+            <dt>Email:</dt>
+            <dd id="email">[[contact.email]]</dd>
+          </dl>
+        </template>
+
+        <template is="dom-if" if="[[contact.phone]]">
+          <dl class="address-item">
+            <dt>Phone:</dt>
+            <dd id="phone">[[contact.phone]]</dd>
+          </dl>
+        </template>
+
+        <template is="dom-if" if="[[_hasStreetAddress(contact)]]">
+          <div id="address" class="street-address">
+            <h3>Street Address:</h3>
+            <div class="street-address-line">[[contact.streetAddress]]</div>
+            <div class="street-address-line">[[contact.city]]</div>
+            <div class="street-address-line">[[contact.postalCode]]</div>
+          </dl>
+        </template>
+
+  </template>
+
+  <script>
+  (function(window) {
+    'use strict';
+
+    Polymer({
+      is: 'contact-details',
+      properties: {
+        contact: String
+      },
+      _hasStreetAddress: function (contact) {
+        return (contact.streetAddress || contact.city || contact.postalCode);
+      }
+    });
+  })(window);
+  </script>
+</dom-module>

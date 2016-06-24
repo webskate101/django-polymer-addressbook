@@ -1,0 +1,11 @@
+{
+  "name": "django-polymer-addressbook",
+  "version": "0.0.1",
+  "ignore": [],
+  "dependencies": {
+    "iron-elements": "^1.0.10",
+    "paper-elements": "^1.0.7",
+    "polymer": "Polymer/polymer#1.5.0",
+    "web-component-tester": "Polymer/web-component-tester#4.0.3"
+  }
+}
