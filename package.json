@@ -7,7 +7,6 @@
     "postinstall": "bower install",
     "test": "wct addressbook/static/app/test.html"
   },
-  "license": "ISC",
   "dependencies": {},
   "devDependencies": {
     "bower": "1.7.9",
